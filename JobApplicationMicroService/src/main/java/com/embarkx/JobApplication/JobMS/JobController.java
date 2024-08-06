@@ -30,7 +30,6 @@ public class JobController {
 			List<JobDTO> jobWithCompanyDTOs = jobService.findAll();
 			return new ResponseEntity<>(jobWithCompanyDTOs, HttpStatus.OK);
 		} catch (ResponseStatusException e) {
-			// TODO: handle exception
 			return new ResponseEntity<>(e.getReason(), e.getStatusCode());
 
 		}

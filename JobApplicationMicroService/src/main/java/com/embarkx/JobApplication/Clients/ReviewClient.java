@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.embarkx.JobApplication.external.Review;
 
-@FeignClient(name = "REVIEWAPPLICATION")
+@FeignClient(name = "REVIEWAPPLICATION", url = "${reviewapplication.url}")
 public interface ReviewClient {
 
 	@GetMapping("/reviews")

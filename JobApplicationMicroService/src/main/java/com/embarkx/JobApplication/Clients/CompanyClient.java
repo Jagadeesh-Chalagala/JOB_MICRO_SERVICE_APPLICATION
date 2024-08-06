@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import com.embarkx.JobApplication.external.Company;
 
-@FeignClient(name = "COMPANYAPPLICATION")
+@FeignClient(name = "COMPANYAPPLICATION" , url="${companyapplication.url}")
 public interface CompanyClient {
 
 	@GetMapping("/companies/{Id}")

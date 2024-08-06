@@ -15,15 +15,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.embarkx.ReviewApplication.ReviewMS.messaging.ReviewMessageProducer;
+
+import lombok.AllArgsConstructor;
+
 @RestController
 @RequestMapping("/reviews")
+@AllArgsConstructor
 public class ReviewController {
+
 	private ReviewService reviewService;
 
-	public ReviewController(ReviewService reviewService) {
-		super();
-		this.reviewService = reviewService;
-	}
+	private ReviewMessageProducer reviewMessageProducer;
+
 
 	@GetMapping
 	public ResponseEntity<?> getAllReviews(@RequestParam Long companyId) {
@@ -69,9 +73,16 @@ public class ReviewController {
 	public ResponseEntity<String> addReview(@RequestParam Long companyId, @RequestBody Review review) {
 		try {
 			reviewService.addReview(companyId, review);
+			reviewMessageProducer.sendMessage(review);
 			return new ResponseEntity<>("Review added successfully", HttpStatus.OK);
 		} catch (ResponseStatusException e) {
 			return new ResponseEntity<>(e.getReason(), e.getStatusCode());
 		}
+	}
+
+	@GetMapping("/averageRating")
+	public Double getAverageReview(@RequestParam Long companyId){
+		List<Review> reviewList = reviewService.getAllReviews(companyId);
+		return reviewList.stream().mapToDouble(Review::getRating).average().orElse(0.0);
 	}
 }

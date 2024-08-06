@@ -1,5 +1,6 @@
 package com.embarkx.JobApplication.JobMS;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -19,6 +20,10 @@ import com.embarkx.JobApplication.Mapper.JobWithCompanyDTOMapper;
 import com.embarkx.JobApplication.external.Company;
 import com.embarkx.JobApplication.external.Review;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
+
 @Service
 public class JobSearchImpl implements JobService {
 
@@ -30,6 +35,8 @@ public class JobSearchImpl implements JobService {
 	private CompanyClient companyClient;
 	private ReviewClient reviewClient;
 
+	private int attempt;
+
 	public JobSearchImpl(JobRepository jobRepository, CompanyClient companyClient, ReviewClient reviewClient) {
 		super();
 		this.jobRepository = jobRepository;
@@ -38,8 +45,12 @@ public class JobSearchImpl implements JobService {
 	}
 
 	@Override
+	// @CircuitBreaker(name = "companyBreaker",fallbackMethod =
+	// "companyBreakerFallBack")
+	// @Retry(name = "companyRetry",fallbackMethod = "companyBreakerFallBack")
+	@RateLimiter(name = "companyRateLimiter", fallbackMethod = "companyBreakerFallBack")
 	public List<JobDTO> findAll() {
-		// TODO Auto-generated method stub
+		System.out.println("Attempts : " + (++attempt));
 		List<Job> jobs = jobRepository.findAll();
 		List<JobDTO> jobDTOs = jobs.stream().map(this::convertToDTO).collect(Collectors.toList());
 
@@ -47,18 +58,26 @@ public class JobSearchImpl implements JobService {
 
 	}
 
+	public List<String> companyBreakerFallBack(Exception e) {
+		List<String> list = new ArrayList<>();
+		list.add("Dummy");
+		return list;
+	}
+
 	private JobDTO convertToDTO(Job job) {
 
 		try {
 
-//			Company company = restTemplate
-//					.getForObject("http://COMPANYAPPLICATION:8081/companies/" + job.getCompanyId(), Company.class);
-//
-//			ResponseEntity<List<Review>> reviewResponse = restTemplate.exchange(
-//					"http://REVIEWAPPLICATION:8083/reviews?companyId=" + job.getCompanyId(), HttpMethod.GET, null,
-//					new ParameterizedTypeReference<List<Review>>() {
-//					});
-//			List<Review> reviews = reviewResponse.getBody();
+			// Company company = restTemplate
+			// .getForObject("http://COMPANYAPPLICATION:8081/companies/" +
+			// job.getCompanyId(), Company.class);
+			//
+			// ResponseEntity<List<Review>> reviewResponse = restTemplate.exchange(
+			// "http://REVIEWAPPLICATION:8083/reviews?companyId=" + job.getCompanyId(),
+			// HttpMethod.GET, null,
+			// new ParameterizedTypeReference<List<Review>>() {
+			// });
+			// List<Review> reviews = reviewResponse.getBody();
 
 			Company company = companyClient.getCompany(job.getCompanyId());
 			List<Review> reviews = reviewClient.getReviews(job.getCompanyId());
@@ -68,7 +87,7 @@ public class JobSearchImpl implements JobService {
 			return jobDTO;
 
 		} catch (HttpClientErrorException e) {
-			// TODO: handle exception
+
 			throw new ResponseStatusException(e.getStatusCode(),
 					e.getMessage() + " and company id is : " + job.getCompanyId());
 		}
@@ -77,13 +96,12 @@ public class JobSearchImpl implements JobService {
 
 	@Override
 	public void createJob(Job job) {
-		// TODO Auto-generated method stub
+
 		jobRepository.save(job);
 	}
 
 	@Override
 	public ResponseEntity<JobDTO> getJob(Long Id) {
-		// TODO Auto-generated method stub
 
 		Optional<Job> optJob = jobRepository.findById(Id);
 
@@ -95,7 +113,7 @@ public class JobSearchImpl implements JobService {
 
 	@Override
 	public ResponseEntity<String> deleteJob(Long Id) {
-		// TODO Auto-generated method stub
+
 		try {
 			jobRepository.deleteById(Id);
 			return new ResponseEntity<String>("Job deleted successfully", HttpStatus.OK);
@@ -106,7 +124,6 @@ public class JobSearchImpl implements JobService {
 
 	@Override
 	public ResponseEntity<String> updateJob(Long Id, Job job) {
-		// TODO Auto-generated method stub
 
 		Optional<Job> optJob = jobRepository.findById(Id);
 
